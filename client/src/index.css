@@ -1,0 +1,325 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Color System */
+  --bg-dark: #0A0A0A;
+  --bg-dark-elevated: #111418;
+  --bg-dark-card: #15181E;
+  --bg-dark-hover: #1C2028;
+
+  --bg-light: #F6F7F9;
+  --bg-light-card: #FFFFFF;
+  --bg-light-subtle: #ECEEF2;
+
+  --lime: #C6F24E;
+  --lime-hover: #B4E236;
+  --lime-dim: rgba(198, 242, 78, 0.16);
+  --lime-border: rgba(198, 242, 78, 0.35);
+
+  --text-white: #FFFFFF;
+  --text-gray-light: #E2E8F0;
+  --text-gray-muted: #94A3B8;
+  --text-gray-dim: #64748B;
+
+  --text-dark: #0A0A0A;
+  --text-dark-secondary: #334155;
+  --text-dark-muted: #64748B;
+
+  --border-dark: rgba(255, 255, 255, 0.09);
+  --border-dark-hover: rgba(255, 255, 255, 0.22);
+  --border-light: rgba(0, 0, 0, 0.09);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.25);
+  --shadow-lime: 0 0 30px rgba(198, 242, 78, 0.22);
+  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+
+  --transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-body);
+  background-color: var(--bg-dark);
+  color: var(--text-white);
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-white);
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+  background: #22262E;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--lime);
+}
+
+/* Typography Helpers */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Kondhare-Style Lime Highlighter effect */
+.lime-highlight {
+  display: inline-block;
+  position: relative;
+  color: inherit;
+}
+.lime-highlight::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0.1em;
+  width: 100%;
+  height: 0.22em;
+  background-color: var(--lime);
+  z-index: -1;
+  border-radius: 2px;
+}
+
+/* Rotated Vertical Tags */
+.vertical-tag {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-gray-dim);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.vertical-tag .slash {
+  color: var(--lime);
+  font-weight: 800;
+}
+
+/* Pill Badges */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all var(--transition-fast);
+}
+
+.badge-pill-lime {
+  background-color: var(--lime);
+  color: #0A0A0A;
+  box-shadow: 0 0 15px rgba(198, 242, 78, 0.3);
+}
+
+.badge-pill-outline {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-dark);
+  color: var(--text-gray-light);
+}
+
+.badge-pill-dark {
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-white);
+}
+
+/* Button System */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.6rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  transition: all var(--transition-smooth);
+}
+
+.btn-pill:hover {
+  transform: translateY(-2px);
+}
+
+.btn-pill:active {
+  transform: translateY(0);
+}
+
+.btn-lime {
+  background-color: var(--lime);
+  color: #0A0A0A;
+  box-shadow: 0 0 20px rgba(198, 242, 78, 0.25);
+}
+.btn-lime:hover {
+  background-color: var(--lime-hover);
+  box-shadow: 0 0 30px rgba(198, 242, 78, 0.45);
+}
+
+.btn-outline-white {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-white);
+}
+.btn-outline-white:hover {
+  border-color: var(--lime);
+  color: var(--lime);
+  background: rgba(198, 242, 78, 0.05);
+}
+
+.btn-dark {
+  background-color: #0A0A0A;
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.btn-dark:hover {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+
+/* Container */
+.site-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+@media (max-width: 768px) {
+  .site-container {
+    padding: 0 1.25rem;
+  }
+}
+
+/* Light Section Theme (Editorial Contrast) */
+.section-light {
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  position: relative;
+}
+
+.section-light .text-muted {
+  color: var(--text-dark-muted);
+}
+
+/* Interactive Project/Event List Row (Kondhare Highlight Style) */
+.editorial-row {
+  display: grid;
+  grid-template-columns: 2.5fr 1.5fr 1.2fr auto;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.editorial-row:hover,
+.editorial-row.active {
+  background-color: var(--lime);
+  color: #0A0A0A !important;
+  transform: translateX(6px);
+}
+
+.editorial-row:hover *,
+.editorial-row.active * {
+  color: #0A0A0A !important;
+}
+
+.editorial-row.active .badge-pill,
+.editorial-row:hover .badge-pill {
+  border-color: #0A0A0A !important;
+  color: #0A0A0A !important;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Animation utilities */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s infinite ease-in-out;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
