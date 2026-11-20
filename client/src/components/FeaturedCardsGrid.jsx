@@ -1,25 +1,29 @@
 import React, { useState } from 'react';
-import { Search, Calendar, MapPin, Ticket, ArrowUpRight, Flame, RotateCcw, Users, Clock } from 'lucide-react';
+import { Search, Calendar, MapPin, ArrowUpRight, RotateCcw, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function FeaturedCardsGrid({ 
-  events, 
+  events = [], 
   onSelectEvent, 
   onRegisterQuick, 
   searchQuery, 
   setSearchQuery,
   selectedCategory,
-  setSelectedCategory
+  setSelectedCategory,
+  loading = false,
+  error = null,
+  onRetry
 }) {
   const [selectedSort, setSelectedSort] = useState('date-asc'); // 'date-asc' | 'date-desc' | 'spots' | 'title'
 
   const categories = ['All', 'Technical', 'Cultural', 'Sports', 'Workshops', 'Entrepreneurship'];
 
-  // Search by event title & filter by category
+  // Search by event title & filter by category (client-side refinement if needed)
   const filteredEvents = events.filter(event => {
-    const matchesSearch = searchQuery.trim() === '' || 
-      event.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    const matchesSearch = !searchQuery || searchQuery.trim() === '' || 
+      event.title.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+      (event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase().trim()));
 
-    const matchesCategory = selectedCategory === 'All' || 
+    const matchesCategory = !selectedCategory || selectedCategory === 'All' || 
       event.category.toLowerCase() === selectedCategory.toLowerCase();
 
     return matchesSearch && matchesCategory;
@@ -28,16 +32,16 @@ export function FeaturedCardsGrid({
   // Sort by upcoming date or other criteria
   const sortedEvents = [...filteredEvents].sort((a, b) => {
     if (selectedSort === 'date-asc') {
-      return a.isoDate.localeCompare(b.isoDate);
+      return (a.isoDate || '').localeCompare(b.isoDate || '');
     }
     if (selectedSort === 'date-desc') {
-      return b.isoDate.localeCompare(a.isoDate);
+      return (b.isoDate || '').localeCompare(a.isoDate || '');
     }
     if (selectedSort === 'spots') {
-      return b.spotsRemaining - a.spotsRemaining;
+      return (b.spotsRemaining || 0) - (a.spotsRemaining || 0);
     }
     if (selectedSort === 'title') {
-      return a.title.localeCompare(b.title);
+      return (a.title || '').localeCompare(b.title || '');
     }
     return 0;
   });
@@ -84,9 +88,57 @@ export function FeaturedCardsGrid({
           </div>
 
           <div style={{ fontSize: '0.88rem', color: 'var(--text-gray-muted)', fontFamily: 'var(--font-mono)' }}>
-            SHOWING <strong style={{ color: '#C6F24E' }}>{sortedEvents.length}</strong> OF {events.length} EVENTS
+            {loading ? (
+              <span>SYNCING WITH BACKEND...</span>
+            ) : (
+              <>SHOWING <strong style={{ color: '#C6F24E' }}>{sortedEvents.length}</strong> OF {events.length} EVENTS</>
+            )}
           </div>
         </div>
+
+        {/* Backend API Failure Alert Banner */}
+        {error && (
+          <div 
+            id="backend-error-banner"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: '16px',
+              padding: '1.5rem 2rem',
+              marginBottom: '2.5rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.25rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', maxWidth: '700px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertTriangle size={22} color="#EF4444" />
+              </div>
+              <div>
+                <h4 style={{ color: '#EF4444', fontWeight: 800, fontSize: '1rem', margin: 0 }}>
+                  Backend API Communication Failure
+                </h4>
+                <p style={{ color: 'var(--text-gray-light)', fontSize: '0.86rem', margin: '0.3rem 0 0 0', lineHeight: 1.4 }}>
+                  {error}. Please verify that the Express server is running on port 5000 and connected to MySQL.
+                </p>
+              </div>
+            </div>
+
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="btn-pill btn-lime"
+                style={{ padding: '0.65rem 1.4rem', fontSize: '0.85rem' }}
+              >
+                <RefreshCw size={14} />
+                <span>Retry Connection</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Search, Filter & Sort Control Bar */}
         <div 
@@ -123,7 +175,7 @@ export function FeaturedCardsGrid({
               <input
                 type="text"
                 id="event-search-input"
-                placeholder="Search by event title (e.g. HackPune, EchoFest, ApexClash)..."
+                placeholder="Search events by title or keyword..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -146,7 +198,7 @@ export function FeaturedCardsGrid({
               )}
             </div>
 
-            {/* Sort by upcoming date */}
+            {/* Sort Dropdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-gray-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
                 Sort By:
@@ -205,8 +257,53 @@ export function FeaturedCardsGrid({
           </div>
         </div>
 
-        {/* Empty State when no events match */}
-        {sortedEvents.length === 0 ? (
+        {/* Loading Skeletons */}
+        {loading ? (
+          <div 
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
+              gap: '2rem'
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div
+                key={idx}
+                style={{
+                  backgroundColor: '#13161C',
+                  borderRadius: '20px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  height: '460px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* Poster skeleton with pulse */}
+                <div 
+                  className="skeleton-shimmer"
+                  style={{ 
+                    height: '220px', 
+                    width: '100%', 
+                    backgroundColor: '#1A1D24',
+                    position: 'relative'
+                  }} 
+                />
+                <div style={{ padding: '1.4rem', display: 'flex', flexDirection: 'column', flex: 1, gap: '0.8rem' }}>
+                  <div className="skeleton-shimmer" style={{ width: '40%', height: '14px', backgroundColor: '#1A1D24', borderRadius: '4px' }} />
+                  <div className="skeleton-shimmer" style={{ width: '85%', height: '22px', backgroundColor: '#1A1D24', borderRadius: '6px' }} />
+                  <div className="skeleton-shimmer" style={{ width: '100%', height: '14px', backgroundColor: '#1A1D24', borderRadius: '4px' }} />
+                  <div className="skeleton-shimmer" style={{ width: '70%', height: '14px', backgroundColor: '#1A1D24', borderRadius: '4px' }} />
+                  <div style={{ marginTop: 'auto', paddingTop: '1rem', display: 'flex', gap: '0.6rem' }}>
+                    <div className="skeleton-shimmer" style={{ flex: 1, height: '36px', backgroundColor: '#1A1D24', borderRadius: '20px' }} />
+                    <div className="skeleton-shimmer" style={{ width: '90px', height: '36px', backgroundColor: '#1A1D24', borderRadius: '20px' }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sortedEvents.length === 0 ? (
+          /* Empty State when no events match */
           <div 
             id="empty-events-state"
             style={{
@@ -226,16 +323,20 @@ export function FeaturedCardsGrid({
               No Events Found
             </h3>
             <p style={{ color: 'var(--text-gray-muted)', marginTop: '0.5rem', fontSize: '0.92rem', lineHeight: 1.5 }}>
-              No campus events match your search "{searchQuery}" or category filter "{selectedCategory}".
+              {searchQuery || selectedCategory !== 'All' 
+                ? `No campus events match your search "${searchQuery}" or category filter "${selectedCategory}".`
+                : 'No published events are currently scheduled on the campus calendar.'}
             </p>
-            <button
-              onClick={handleResetFilters}
-              className="btn-pill btn-lime"
-              style={{ marginTop: '1.75rem', padding: '0.7rem 1.6rem', fontSize: '0.88rem' }}
-            >
-              <RotateCcw size={15} />
-              <span>Reset All Filters</span>
-            </button>
+            {(searchQuery || selectedCategory !== 'All') && (
+              <button
+                onClick={handleResetFilters}
+                className="btn-pill btn-lime"
+                style={{ marginTop: '1.75rem', padding: '0.7rem 1.6rem', fontSize: '0.88rem' }}
+              >
+                <RotateCcw size={15} />
+                <span>Reset All Filters</span>
+              </button>
+            )}
           </div>
         ) : (
           /* Responsive Event Cards Grid */
@@ -247,7 +348,11 @@ export function FeaturedCardsGrid({
             }}
           >
             {sortedEvents.map((event) => {
-              const fillPercentage = Math.round(((event.spotsTotal - event.spotsRemaining) / event.spotsTotal) * 100);
+              const spotsTotal = event.spotsTotal || event.capacity || 100;
+              const spotsRemaining = event.spotsRemaining !== undefined ? event.spotsRemaining : spotsTotal;
+              const fillPercentage = spotsTotal > 0 ? Math.min(100, Math.round(((spotsTotal - spotsRemaining) / spotsTotal) * 100)) : 0;
+              const venueDisplay = event.venue ? event.venue.split(',')[0] : 'Campus Quad';
+              const dateDisplay = event.date ? event.date.split(',')[0] : 'Date TBD';
 
               return (
                 <div
@@ -297,16 +402,33 @@ export function FeaturedCardsGrid({
                     }} />
 
                     {/* Category Badge */}
-                    <div style={{ position: 'absolute', top: '1rem', left: '1rem' }}>
+                    <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.4rem' }}>
                       <span className="badge-pill badge-pill-lime" style={{ fontSize: '0.7rem', padding: '0.3rem 0.75rem' }}>
                         {event.category}
                       </span>
+                      {Boolean(event.is_registered) && (
+                        <span 
+                          className="badge-pill" 
+                          style={{ 
+                            fontSize: '0.7rem', 
+                            padding: '0.3rem 0.75rem',
+                            backgroundColor: 'rgba(198, 242, 78, 0.2)',
+                            color: '#C6F24E',
+                            border: '1px solid #C6F24E',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          <CheckCircle2 size={12} /> Registered
+                        </span>
+                      )}
                     </div>
 
                     {/* Price Badge */}
                     <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
                       <span className="badge-pill badge-pill-dark" style={{ fontSize: '0.7rem' }}>
-                        {event.price}
+                        {event.price || 'Free'}
                       </span>
                     </div>
 
@@ -330,7 +452,7 @@ export function FeaturedCardsGrid({
                       }}
                     >
                       <Calendar size={13} color="#C6F24E" />
-                      <span>{event.date}</span>
+                      <span>{dateDisplay}</span>
                     </div>
                   </div>
 
@@ -340,7 +462,7 @@ export function FeaturedCardsGrid({
                     {/* Venue */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-gray-dim)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                       <MapPin size={12} color="#C6F24E" />
-                      <span>{event.venue.split(',')[0]}</span>
+                      <span>{venueDisplay}</span>
                     </div>
 
                     {/* Title */}
@@ -359,15 +481,15 @@ export function FeaturedCardsGrid({
 
                     {/* Short Description */}
                     <p style={{ fontSize: '0.84rem', color: 'var(--text-gray-muted)', marginTop: '0.5rem', lineHeight: 1.5, flex: 1 }}>
-                      {event.shortDescription}
+                      {event.shortDescription || event.description}
                     </p>
 
                     {/* Available Seats Progress Bar */}
                     <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', marginBottom: '0.4rem' }}>
                         <span style={{ color: 'var(--text-gray-dim)' }}>SEAT CAPACITY</span>
-                        <span style={{ color: event.spotsRemaining < 20 ? '#FF6B6B' : '#C6F24E', fontWeight: 700 }}>
-                          {event.spotsRemaining} OF {event.spotsTotal} SEATS AVAILABLE
+                        <span style={{ color: spotsRemaining < 20 ? '#FF6B6B' : '#C6F24E', fontWeight: 700 }}>
+                          {spotsRemaining} OF {spotsTotal} SEATS AVAILABLE
                         </span>
                       </div>
 
@@ -376,7 +498,7 @@ export function FeaturedCardsGrid({
                           style={{
                             height: '100%',
                             width: `${fillPercentage}%`,
-                            backgroundColor: event.spotsRemaining < 20 ? '#FF6B6B' : '#C6F24E',
+                            backgroundColor: spotsRemaining < 20 ? '#FF6B6B' : '#C6F24E',
                             borderRadius: '3px'
                           }}
                         />
@@ -399,7 +521,7 @@ export function FeaturedCardsGrid({
                         className="btn-pill btn-lime"
                         style={{ padding: '0.65rem 1.25rem', fontSize: '0.82rem' }}
                       >
-                        <span>RSVP Now</span>
+                        <span>{Boolean(event.is_registered) ? 'Manage RSVP' : 'RSVP Now'}</span>
                       </button>
                     </div>
 
@@ -411,6 +533,17 @@ export function FeaturedCardsGrid({
         )}
 
       </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { opacity: 0.35; }
+          50% { opacity: 0.8; }
+          100% { opacity: 0.35; }
+        }
+        .skeleton-shimmer {
+          animation: shimmer 1.6s infinite ease-in-out;
+        }
+      `}</style>
     </section>
   );
 }

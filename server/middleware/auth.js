@@ -61,6 +61,46 @@ export const authenticate = async (req, res, next) => {
 };
 
 /**
+ * Optional Authentication Middleware
+ * If token is present and valid, attaches req.user; otherwise req.user is null without blocking the request
+ */
+export const optionalAuthenticate = async (req, res, next) => {
+  try {
+    let token = null;
+
+    if (req.cookies && req.cookies[JWT_CONFIG.cookieName]) {
+      token = req.cookies[JWT_CONFIG.cookieName];
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    try {
+      const decoded = verifyToken(token);
+      const [rows] = await pool.query(
+        'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
+        [decoded.id]
+      );
+      if (rows.length > 0) {
+        req.user = rows[0];
+      } else {
+        req.user = null;
+      }
+    } catch (err) {
+      req.user = null;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Role Authorization Middleware Factory
  * Ensures the authenticated user possesses one of the allowed roles
  * @param  {...string} allowedRoles - e.g. 'student', 'organizer', 'admin'

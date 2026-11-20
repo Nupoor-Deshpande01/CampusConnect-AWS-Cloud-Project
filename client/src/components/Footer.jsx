@@ -150,8 +150,13 @@ export function Footer({ onNavigate }) {
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('dashboard')} style={{ background: 'none', border: 'none', color: 'var(--text-gray-light)', cursor: 'pointer', padding: 0 }}>
+                <button onClick={() => onNavigate('passes')} style={{ background: 'none', border: 'none', color: 'var(--text-gray-light)', cursor: 'pointer', padding: 0 }}>
                   Student Passes
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('organizer')} style={{ background: 'none', border: 'none', color: '#C6F24E', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                  Organizer Portal →
                 </button>
               </li>
             </ul>

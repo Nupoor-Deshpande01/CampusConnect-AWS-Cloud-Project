@@ -7,27 +7,73 @@ import { CategoryShowcase } from './components/CategoryShowcase';
 import { HowItWorks } from './components/HowItWorks';
 import { EventDetailModal } from './components/EventDetailModal';
 import { AuthModal } from './components/AuthModal';
+import { OrganizerPortal } from './components/OrganizerPortal';
+import { StudentRegistrationsView } from './components/StudentRegistrationsView';
 import { Footer } from './components/Footer';
 import { ToastNotification } from './components/ToastNotification';
-import { INITIAL_EVENTS } from './data/eventsData';
 import { authService } from './services/auth';
+import { eventService } from './services/events';
 
 function App() {
   // Navigation & View State
-  const [activeView, setActiveView] = useState('home'); // 'home' | 'events' | 'categories' | 'how-it-works'
+  const [activeView, setActiveView] = useState('home'); // 'home' | 'events' | 'categories' | 'how-it-works' | 'organizer' | 'passes'
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   // Authentication & User State
   const [currentUser, setCurrentUser] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Events & Registration State
-  const [events, setEvents] = useState(INITIAL_EVENTS);
+  // Live Backend Events State (pure API state, no mock data fallback)
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [eventsError, setEventsError] = useState(null);
+
+  // Selected Modal & Notification State
   const [selectedEventForModal, setSelectedEventForModal] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Attempt to restore authenticated session on initial mount
+  // 1. Debounce search query by 300ms to optimize backend API request load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 2. Load public events from real Express / MySQL backend
+  const loadPublicEvents = async () => {
+    try {
+      setLoadingEvents(true);
+      setEventsError(null);
+
+      const params = { limit: 100 };
+      if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
+        params.search = debouncedSearchQuery.trim();
+      }
+      if (selectedCategory && selectedCategory !== 'All') {
+        params.category = selectedCategory;
+      }
+
+      const res = await eventService.getEvents(params);
+      setEvents(res.events || []);
+    } catch (err) {
+      console.error('Failed to load events from backend:', err);
+      // Strictly do not fall back to fake mock data: display genuine error state
+      setEvents([]);
+      setEventsError(err.message || 'Unable to connect to the CampusConnect Backend API (http://localhost:5000).');
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  // Re-fetch events when debounced search or category filter changes
+  useEffect(() => {
+    loadPublicEvents();
+  }, [debouncedSearchQuery, selectedCategory]);
+
+  // Restore authenticated session on initial mount
   useEffect(() => {
     authService.getMe()
       .then(user => {
@@ -36,7 +82,6 @@ function App() {
         }
       })
       .catch(() => {
-        // Unauthenticated session, normal state
         setCurrentUser(null);
       });
   }, []);
@@ -44,27 +89,23 @@ function App() {
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     setToastMessage(`Welcome back, ${user.name}! Signed in as ${user.role}.`);
+    if (user.role === 'organizer' || user.role === 'admin') {
+      setActiveView('organizer');
+    }
   };
 
   const handleLogout = async () => {
     await authService.logout();
     setCurrentUser(null);
+    if (activeView === 'organizer' || activeView === 'passes') {
+      setActiveView('home');
+    }
     setToastMessage('Signed out successfully.');
   };
 
-  // Quick RSVP / Register action (Mock Registration CTA)
+  // Quick RSVP / Register action: opens modal to register via real API
   const handleRegisterQuick = (event) => {
-    // If not authenticated, prompt sign in or proceed as guest
-    setEvents(prev => prev.map(e => {
-      if (e.id === event.id) {
-        return {
-          ...e,
-          spotsRemaining: Math.max(0, e.spotsRemaining - 1)
-        };
-      }
-      return e;
-    }));
-    setToastMessage(`Registration confirmed for "${event.title}"! Spot reserved.`);
+    setSelectedEventForModal(event);
   };
 
   const scrollToEvents = () => {
@@ -101,8 +142,12 @@ function App() {
             {/* 1. Hero Section with heading "Discover What's Happening on Campus", description, search & category filters */}
             <HeroSection
               onExploreClick={scrollToEvents}
-              onSelectFeaturedEvent={(eventId) => {
-                const evt = events.find(e => e.id === eventId);
+              onSelectFeaturedEvent={(identifier) => {
+                const evt = events.find(e => 
+                  e.id === identifier || 
+                  e.id === Number(identifier) || 
+                  (typeof identifier === 'string' && e.title.toLowerCase().includes(identifier.toLowerCase()))
+                ) || events[0];
                 if (evt) setSelectedEventForModal(evt);
               }}
               searchQuery={searchQuery}
@@ -116,6 +161,8 @@ function App() {
               events={events}
               onSelectEvent={(evt) => setSelectedEventForModal(evt)}
               onRegisterQuick={handleRegisterQuick}
+              loading={loadingEvents}
+              error={eventsError}
             />
 
             {/* 3. Upcoming Events Grid with Title Search, Category Filter, and Date Sorting */}
@@ -127,6 +174,9 @@ function App() {
               setSearchQuery={setSearchQuery}
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
+              loading={loadingEvents}
+              error={eventsError}
+              onRetry={loadPublicEvents}
             />
 
             {/* 4. Category Discovery: Technical, Cultural, Sports, Workshops, Entrepreneurship */}
@@ -155,12 +205,17 @@ function App() {
               setSearchQuery={setSearchQuery}
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
+              loading={loadingEvents}
+              error={eventsError}
+              onRetry={loadPublicEvents}
             />
 
             <EditorialEventsList
               events={events}
               onSelectEvent={(evt) => setSelectedEventForModal(evt)}
               onRegisterQuick={handleRegisterQuick}
+              loading={loadingEvents}
+              error={eventsError}
             />
           </div>
         )}
@@ -183,6 +238,9 @@ function App() {
               setSearchQuery={setSearchQuery}
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
+              loading={loadingEvents}
+              error={eventsError}
+              onRetry={loadPublicEvents}
             />
           </div>
         )}
@@ -198,6 +256,34 @@ function App() {
             />
           </div>
         )}
+
+        {/* Organizer Dashboard & Event Management View */}
+        {activeView === 'organizer' && (
+          <OrganizerPortal
+            currentUser={currentUser}
+            onLoginSuccess={handleLoginSuccess}
+            onEventCreatedOrUpdated={() => {
+              loadPublicEvents();
+              setToastMessage('Event changes saved to database.');
+            }}
+          />
+        )}
+
+        {/* Student Digital Event Passes & Registrations View */}
+        {activeView === 'passes' && (
+          <StudentRegistrationsView
+            currentUser={currentUser}
+            onExploreEvents={() => {
+              setActiveView('events');
+              setTimeout(scrollToEvents, 100);
+            }}
+            onOpenAuth={() => setAuthModalOpen(true)}
+            onRegistrationUpdated={() => {
+              loadPublicEvents();
+              setToastMessage('Registration status updated.');
+            }}
+          />
+        )}
       </main>
 
       {/* Global Footer */}
@@ -208,15 +294,21 @@ function App() {
         }} 
       />
 
-      {/* Event Detail Modal with mock event description and registration CTA */}
+      {/* Event Detail Modal connected to real API with registration CTA & cancellation */}
       {selectedEventForModal && (
         <EventDetailModal
           event={selectedEventForModal}
           onClose={() => setSelectedEventForModal(null)}
+          currentUser={currentUser}
+          onOpenAuth={() => setAuthModalOpen(true)}
           onRegisterSuccess={(evt) => {
-            handleRegisterQuick(evt);
+            loadPublicEvents();
+            setToastMessage(`Registration confirmed for "${evt.title}"! Spot reserved.`);
           }}
-          isRegistered={false}
+          onCancelSuccess={(evt) => {
+            loadPublicEvents();
+            setToastMessage(`Registration cancelled for "${evt.title}". Spot released.`);
+          }}
         />
       )}
 

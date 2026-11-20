@@ -8,6 +8,7 @@ import {
   FolderGit2, 
   ArrowRight,
   User,
+  Users,
   LogOut
 } from 'lucide-react';
 
@@ -36,7 +37,13 @@ export function Navbar({
     { id: 'home', label: 'HOME', icon: Compass },
     { id: 'events', label: 'EVENTS', icon: Ticket },
     { id: 'categories', label: 'CATEGORIES', icon: FolderGit2 },
-    { id: 'how-it-works', label: 'HOW IT WORKS', icon: Sparkles }
+    { id: 'how-it-works', label: 'HOW IT WORKS', icon: Sparkles },
+    ...(currentUser && currentUser.role === 'student'
+      ? [{ id: 'passes', label: 'MY PASSES', icon: Ticket }]
+      : []),
+    ...(currentUser && (currentUser.role === 'organizer' || currentUser.role === 'admin')
+      ? [{ id: 'organizer', label: 'ORGANIZER', icon: Users }]
+      : [{ id: 'organizer', label: 'HOST EVENT', icon: Users }])
   ];
 
   return (
@@ -138,9 +145,23 @@ export function Navbar({
           {currentUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div 
+                onClick={() => {
+                  if (currentUser.role === 'organizer' || currentUser.role === 'admin') {
+                    setActiveView('organizer');
+                  } else if (currentUser.role === 'student') {
+                    setActiveView('passes');
+                  }
+                }}
                 className="badge-pill badge-pill-dark"
-                style={{ padding: '0.45rem 0.85rem', border: '1px solid rgba(198, 242, 78, 0.4)', gap: '0.4rem' }}
-                title={`Signed in as ${currentUser.email} (${currentUser.role})`}
+                style={{ 
+                  padding: '0.45rem 0.85rem', 
+                  border: '1px solid rgba(198, 242, 78, 0.4)', 
+                  gap: '0.4rem',
+                  cursor: 'pointer'
+                }}
+                title={currentUser.role === 'organizer' || currentUser.role === 'admin' 
+                  ? `Signed in as ${currentUser.email} - Click to open Organizer Portal` 
+                  : `Signed in as ${currentUser.email} - Click to view My Passes`}
               >
                 <User size={13} color="#C6F24E" />
                 <span style={{ fontSize: '0.78rem', color: '#FFFFFF', fontWeight: 600 }}>
